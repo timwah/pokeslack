@@ -35,7 +35,7 @@ class Pokesearch:
 
     def search(self, lat, lng, step_limit, step_size):
         if self.api._auth_provider and self.api._auth_provider._ticket_expire:
-            remaining_time = self.api._auth_provider._ticket_expire/1000 - time.time()
+            remaining_time = long(self.api._auth_provider._ticket_expire) / 1000.0 - time.time()
             if remaining_time > 60:
                 logger.info("Skipping Pokemon Go login process since already logged in for another {:.2f} seconds".format(remaining_time))
             else:
