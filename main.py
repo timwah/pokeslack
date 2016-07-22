@@ -15,23 +15,6 @@ from pokeutil import get_pos_by_name
 
 logger = logging.getLogger(__name__)
 
-def pokemon_orderby(pokemon):
-    pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
-    distance = vincenty(position, pokemon_position).miles
-    return (pokemon['rarity'], -distance)
-
-def notify_pokemon(pokeslack, pokemons, debug=False):
-    sorted_pokemons = sorted(pokemons.values(), key=pokemon_orderby, reverse=True)
-    for pokemon in sorted_pokemons:
-        disappear_time = pokemon['disappear_time']
-        expires_in = disappear_time - datetime.utcnow()
-
-        pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
-        distance = vincenty(position, pokemon_position).miles
-
-        logger.debug("have pokemon: %s - %s, rarity: %s, expires in: %s, %s miles away", pokemon['pokemon_id'], pokemon['name'], pokemon['rarity'], expires_in, distance)
-        pokeslack.try_send_pokemon(pokemon, position, distance, debug)
-
 if __name__ == '__main__':
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -60,7 +43,7 @@ if __name__ == '__main__':
     step_limit = 5
 
     # debug vars, used to test slack integration w/o waiting
-    use_cache = False
+    use_cache = True
     cached_filename = 'cached_pokedata.json'
     search_timeout = 30
 
@@ -75,8 +58,14 @@ if __name__ == '__main__':
         logger.info('searching starting at latlng: (%s, %s)', position[0], position[1])
         pokesearch.login()
         while True:
-            pokemons = pokesearch.search(position[0], position[1], step_limit, step_size)
-            notify_pokemon(pokeslack, pokemons)
+            pokemons = []
+            for pokemon in pokesearch.search(position[0], position[1], step_limit, step_size):
+                pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
+                distance = vincenty(position, pokemon_position).miles
+                expires_in = pokemon['disappear_time'] - datetime.utcnow()
+                logger.info("adding pokemon: %s - %s, rarity: %s, expires in: %s, distance: %s miles", pokemon['pokemon_id'], pokemon['name'], pokemon['rarity'], expires_in, distance)
+                pokeslack.try_send_pokemon(pokemon, position, distance, debug=False)
+                pokemons.append(pokemon)
             with open(cached_filename, 'w') as fp:
                 json.dump(pokemons, fp, default=json_serializer, indent=4)
             logging.info('done searching, waiting %s seconds...', search_timeout)
@@ -84,5 +73,8 @@ if __name__ == '__main__':
     else:
         with open(cached_filename, 'r') as fp:
             pokemons = json.load(fp, object_hook=json_deserializer)
-            notify_pokemon(pokeslack, pokemons, True)
+            for pokemon in pokemons:
+                pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
+                distance = vincenty(position, pokemon_position).miles
+                pokeslack.try_send_pokemon(pokemon, position, distance, debug=True)
         logger.info('loaded cached pokemon data for %s pokemon', len(pokemons.keys()))

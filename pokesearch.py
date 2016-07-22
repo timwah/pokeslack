@@ -75,21 +75,19 @@ class Pokesearch:
             for key in pokemons.keys():
                 if not key in all_pokemon:
                     pokemon = pokemons[key]
-                    expires_in = pokemon['disappear_time'] - datetime.utcnow()
                     pokemon_id = pokemon['pokemon_id']
                     pokedata = Pokedata.get(pokemon_id)
                     pokemon['name'] = pokedata['name']
                     pokemon['rarity'] = pokedata['rarity']
                     pokemon['key'] = key
-                    logger.info("adding pokemon: %s - %s, rarity: %s, expires in: %s", pokemon_id, pokemon['name'], pokemon['rarity'], expires_in)
                     all_pokemon[key] = pokemon
+                    yield pokemon
                 # else:
                 #     logger.info("have duplicate poke: %s", key)
 
             logger.info('Completed {:5.2f}% of scan.'.format(float(i) / step_limit**2*100))
             i += 1
             time.sleep(REQ_SLEEP)
-        return all_pokemon
 
 def generate_location_steps(starting_lat, startin_lng, step_size, step_limit):
     pos, x, y, dx, dy = 1, 0, 0, 0, -1
