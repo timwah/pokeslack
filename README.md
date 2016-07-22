@@ -37,6 +37,11 @@ Using Heroku:
 ## Deploying to Heroku
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
+## Ideas for improvement
+* Immediately send an alert for found Pokemon meeting the alert criteria instead of waiting for the entire scan pass to be complete
+* Use distance (plus a buffer, since distance is calculated via a straight line) and walking speed (3 mph) compared with expiration time to calculate if you can walk there in time, then send a notification. Can then eliminate the distance limit. 
+* Nicer Slack messages with images to the Pokemon, and a static Google map image of where the Pokemon is in comparison to the search position
+
 ## Credits  
 This project builds on existing PokemonGo APIs and integrations:  
 https://github.com/tejado/pgoapi  
