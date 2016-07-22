@@ -18,7 +18,7 @@
 		},
 		"RARITY_LIMIT": {
 			"description": "Only notified for Pokémon at this rarity or higher.",
-			"value": 5
+			"value": 3
 		},
 		"DISTANCE_LIMIT": {
 			"description": "Only notified for Pokémon at this distance (miles) or less.",
