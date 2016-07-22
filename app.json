@@ -1,0 +1,31 @@
+{
+	"name": "Pokéslack",
+	"description": "Get nearby Pokémon notifications to a Slack channel.",
+	"repository": "https://github.com/AHAAAAAAA/PokemonGo-Map",
+	"keywords": ["pokemon", "pokemon go", "slack"],
+	"env": {
+		"AUTH_SERVICE": {
+			"description": "Authentication service to use. (ptc or google)"
+		},
+		"USERNAME": {
+			"description": "Your username to login to the specified authentication service."
+		},
+		"PASSWORD": {
+			"description": "Your password to login to the specified authentication service."
+		},
+		"LOCATION_NAME": {
+			"description": "Location on which the map should be centered. This can be an address, co-ordinates or anything that Google Maps accepts."
+		},
+		"RARITY_LIMIT": {
+			"description": "Only notified for Pokémon at this rarity or higher.",
+			"value": 5
+		},
+		"DISTANCE_LIMIT": {
+			"description": "Only notified for Pokémon at this distance (miles) or less.",
+			"value": 0.5
+		},
+		"SLACK_WEBHOOK_URL": {
+			"description": "Looks like https://hooks.slack.com/services/XXX"
+		}
+	}
+}
