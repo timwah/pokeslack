@@ -16,12 +16,11 @@ Create an .env file at the project root with the following content filled out. D
     PASSWORD=password
     LOCATION_NAME=Some location, USA
     RARITY_LIMIT=3
-    DISTANCE_LIMIT=0.5
     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX
 
 ### Pokemon Data
 This project contains a file `pokedata.csv` where you can customize the assigned rarity to each Pokemon. 
-Receive notifications for any Pokemon with rarity at `RARITY_LIMIT` or higher and distance (in miles) less than `DISTANCE_LIMIT`.
+Receive notifications for any Pokemon with rarity at `RARITY_LIMIT` or higher and at a distance walkable before the expiration time.
 
 ## Running 
 
@@ -38,8 +37,6 @@ Using Heroku:
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 ## Ideas for improvement
-* Immediately send an alert for found Pokemon meeting the alert criteria instead of waiting for the entire scan pass to be complete
-* Use distance (plus a buffer, since distance is calculated via a straight line) and walking speed (3 mph) compared with expiration time to calculate if you can walk there in time, then send a notification. Can then eliminate the distance limit. 
 * Nicer Slack messages with images to the Pokemon, and a static Google map image of where the Pokemon is in comparison to the search position
 
 ## Credits  
