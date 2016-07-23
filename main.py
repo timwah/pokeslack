@@ -43,7 +43,7 @@ if __name__ == '__main__':
     step_limit = 5
 
     # debug vars, used to test slack integration w/o waiting
-    use_cache = True
+    use_cache = False
     cached_filename = 'cached_pokedata.json'
     search_timeout = 30
 
@@ -77,4 +77,4 @@ if __name__ == '__main__':
                 pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
                 distance = vincenty(position, pokemon_position).miles
                 pokeslack.try_send_pokemon(pokemon, position, distance, debug=True)
-        logger.info('loaded cached pokemon data for %s pokemon', len(pokemons.keys()))
+        logger.info('loaded cached pokemon data for %s pokemon', len(pokemons))
