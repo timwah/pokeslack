@@ -38,8 +38,7 @@ if __name__ == '__main__':
     slack_webhook_url = str(os.environ.get('SLACK_WEBHOOK_URL', env.get('SLACK_WEBHOOK_URL')))
 
     # const vars
-    step_size = 0.0025
-    step_limit = 5
+    num_steps = 5
 
     # debug vars, used to test slack integration w/o waiting
     use_cache = False
@@ -58,7 +57,7 @@ if __name__ == '__main__':
         pokesearch.login()
         while True:
             pokemons = []
-            for pokemon in pokesearch.search(position, step_limit, step_size):
+            for pokemon in pokesearch.search(position, num_steps):
                 pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
                 distance = vincenty(position, pokemon_position).miles
                 expires_in = pokemon['disappear_time'] - datetime.utcnow()
