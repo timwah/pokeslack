@@ -1,7 +1,7 @@
 {
 	"name": "Pokéslack",
 	"description": "Get nearby Pokémon notifications to a Slack channel.",
-	"repository": "https://github.com/AHAAAAAAA/PokemonGo-Map",
+	"repository": "https://github.com/timwah/pokeslack",
 	"keywords": ["pokemon", "pokemon go", "slack"],
 	"env": {
 		"AUTH_SERVICE": {
