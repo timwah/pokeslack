@@ -18,7 +18,7 @@
 		},
 		"RARITY_LIMIT": {
 			"description": "Only notified for Pokémon at this rarity or higher.",
-			"value": 3
+			"value": "3"
 		},
 		"SLACK_WEBHOOK_URL": {
 			"description": "Looks like https://hooks.slack.com/services/XXX"
