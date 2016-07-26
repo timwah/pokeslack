@@ -26,7 +26,7 @@ Receive notifications for any Pokemon with rarity at `RARITY_LIMIT` or higher an
 
 Locally:  
 
-    pip install -r requirements
+    pip install -r requirements.txt
     python main.py
     
 Using Heroku:  
