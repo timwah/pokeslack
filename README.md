@@ -43,3 +43,4 @@ Using Heroku:
 This project builds on existing PokemonGo APIs and integrations:  
 https://github.com/tejado/pgoapi  
 https://github.com/AHAAAAAAA/PokemonGo-Map  
+[@mastermindmatt](https://github.com/mastermindmatt) for the rarity data in pokedata.csv
