@@ -26,7 +26,7 @@ Receive notifications for any Pokemon with rarity at `RARITY_LIMIT` or higher an
 
 Locally:  
 
-    pip install -r requirements
+    pip install -r requirements.txt
     python main.py
     
 Using Heroku:  
@@ -43,3 +43,4 @@ Using Heroku:
 This project builds on existing PokemonGo APIs and integrations:  
 https://github.com/tejado/pgoapi  
 https://github.com/AHAAAAAAA/PokemonGo-Map  
+[@mastermindmatt](https://github.com/mastermindmatt) for the rarity data in pokedata.csv
