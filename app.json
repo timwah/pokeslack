@@ -20,10 +20,6 @@
 			"description": "Only notified for Pokémon at this rarity or higher.",
 			"value": 3
 		},
-		"DISTANCE_LIMIT": {
-			"description": "Only notified for Pokémon at this distance (miles) or less.",
-			"value": 0.5
-		},
 		"SLACK_WEBHOOK_URL": {
 			"description": "Looks like https://hooks.slack.com/services/XXX"
 		}
