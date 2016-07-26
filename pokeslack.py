@@ -8,7 +8,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-EXPIRE_BUFFER_SECONDS = 30
+EXPIRE_BUFFER_SECONDS = 5
 
 class Pokeslack:
     def __init__(self, rarity_limit, slack_webhook_url):
