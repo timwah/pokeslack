@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 import random
 import time
 
@@ -12,7 +13,18 @@ from pokedata import Pokedata, parse_map
 logger = logging.getLogger(__name__)
 
 REQ_SLEEP = 1
-TIMESTAMP = '\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000'
+
+#Constants for Hex Grid
+#Gap between vertical and horzonal "rows"
+lat_gap_meters = 150
+lng_gap_meters = 86.6
+
+#111111m is approx 1 degree Lat, which is close enough for this
+meters_per_degree = 111111
+lat_gap_degrees = float(lat_gap_meters) / meters_per_degree
+
+def calculate_lng_degrees(lat):
+    return float(lng_gap_meters) / (meters_per_degree * math.cos(math.radians(lat)))
 
 class Pokesearch:
     def __init__(self, api, auth_service, username, password, position):
@@ -33,7 +45,7 @@ class Pokesearch:
 
         logger.info('login successful')
 
-    def search(self, lat, lng, step_limit, step_size):
+    def search(self, position, step_limit, step_size):
         if self.api._auth_provider and self.api._auth_provider._ticket_expire:
             if isinstance(self.api._auth_provider._ticket_expire, (int, long)):
                 remaining_time = self.api._auth_provider._ticket_expire / 1000.0 - time.time()
@@ -46,14 +58,12 @@ class Pokesearch:
         else:
             self.login()
 
-        # coords = generate_spiral(lat, lng, step_size, step_limit)
-        coords = generate_location_steps(lat, lng, step_size, step_limit)
         all_pokemon = {}
         i = 1
-        for coord in coords:
-            lat = coord['lat']
-            lng = coord['lng']
-            self.api.set_position(lat, lng, 0)
+        for coord in generate_location_steps2(position, step_size, step_limit):
+            lat = coord[0]
+            lng = coord[1]
+            self.api.set_position(*coord)
 
             cell_ids = get_cell_ids(lat, lng)
             timestamps = [0,] * len(cell_ids)
@@ -84,21 +94,63 @@ class Pokesearch:
                     yield pokemon
                 # else:
                 #     logger.info("have duplicate poke: %s", key)
-
-            logger.info('Completed {:5.2f}% of scan.'.format(float(i) / step_limit**2*100))
+            total_steps = (3 * (step_limit**2)) - (3 * step_limit) + 1
+            logger.info('Completed {:5.2f}% of scan.'.format(float(i) / total_steps * 100))
             i += 1
             time.sleep(REQ_SLEEP)
 
-def generate_location_steps(starting_lat, startin_lng, step_size, step_limit):
+def generate_location_steps2(position, step_size, num_steps):
+
+    ring = 1 #Which ring are we on, 0 = center
+    lat_location = position[0]
+    lng_location = position[1]
+
+    yield (lat_location, lng_location, 0) #Middle circle
+
+    while ring < num_steps:
+        #Move the location diagonally to top left spot, then start the circle which will end up back here for the next ring
+        #Move Lat north first
+        lat_location += lat_gap_degrees
+        lng_location -= calculate_lng_degrees(lat_location)
+
+        for direction in range(6):
+            for i in range(ring):
+                if direction == 0: #Right
+                    lng_location += calculate_lng_degrees(lat_location) * 2
+
+                if direction == 1: #Right Down
+                    lat_location -= lat_gap_degrees
+                    lng_location += calculate_lng_degrees(lat_location)
+
+                if direction == 2: #Left Down
+                    lat_location -= lat_gap_degrees
+                    lng_location -= calculate_lng_degrees(lat_location)
+
+                if direction == 3: #Left
+                    lng_location -= calculate_lng_degrees(lat_location) * 2
+
+                if direction == 4: #Left Up
+                    lat_location += lat_gap_degrees
+                    lng_location -= calculate_lng_degrees(lat_location)
+
+                if direction == 5: #Right Up
+                    lat_location += lat_gap_degrees
+                    lng_location += calculate_lng_degrees(lat_location)
+
+                yield (lat_location, lng_location, 0) #Middle circle
+
+        ring += 1
+
+def generate_location_steps(position, step_size, step_limit):
     pos, x, y, dx, dy = 1, 0, 0, 0, -1
     while -step_limit / 2 < x <= step_limit / 2 and -step_limit / 2 < y <= step_limit / 2:
-        yield {'lat': x * step_size + starting_lat, 'lng': y * step_size + startin_lng}
+        yield (x * step_size + position[0], y * step_size + position[1], 0)
         if x == y or (x < 0 and x == -y) or (x > 0 and x == 1 - y):
             dx, dy = -dy, dx
         x, y = x + dx, y + dy
 
-def generate_spiral(starting_lat, starting_lng, step_size, step_limit):
-    yield {'lat': starting_lat, 'lng': starting_lng}
+def generate_spiral(position, step_size, step_limit):
+    yield (position[0], position[1], 0)
     steps,x,y,d,m = 1, 0, 0, 1, 1
     rlow = 0.0
     rhigh = 0.0005
@@ -107,21 +159,21 @@ def generate_spiral(starting_lat, starting_lng, step_size, step_limit):
         while 2 * x * d < m and steps < step_limit:
             x = x + d
             steps += 1
-            lat = x * step_size + starting_lat + random.uniform(rlow, rhigh)
-            lng = y * step_size + starting_lng + random.uniform(rlow, rhigh)
-            yield {'lat': lat, 'lng': lng}
+            lat = x * step_size + position[0] + random.uniform(rlow, rhigh)
+            lng = y * step_size + position[1] + random.uniform(rlow, rhigh)
+            yield (lat, lng, 0)
         while 2 * y * d < m and steps < step_limit:
             y = y + d
             steps += 1
-            lat = x * step_size + starting_lat + random.uniform(rlow, rhigh)
-            lng = y * step_size + starting_lng + random.uniform(rlow, rhigh)
-            yield {'lat': lat, 'lng': lng}
+            lat = x * step_size + position[0] + random.uniform(rlow, rhigh)
+            lng = y * step_size + position[1] + random.uniform(rlow, rhigh)
+            yield (lat, lng, 0)
 
         d = -1 * d
         m = m + 1
 
-def get_cell_ids(lat, long, radius = 10):
-    origin = CellId.from_lat_lng(LatLng.from_degrees(lat, long)).parent(15)
+def get_cell_ids(lat, lng, radius = 10):
+    origin = CellId.from_lat_lng(LatLng.from_degrees(lat, lng)).parent(15)
     walk = [origin.id()]
     right = origin.next()
     left = origin.prev()

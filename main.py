@@ -58,7 +58,7 @@ if __name__ == '__main__':
         pokesearch.login()
         while True:
             pokemons = []
-            for pokemon in pokesearch.search(position[0], position[1], step_limit, step_size):
+            for pokemon in pokesearch.search(position, step_limit, step_size):
                 pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
                 distance = vincenty(position, pokemon_position).miles
                 expires_in = pokemon['disappear_time'] - datetime.utcnow()
