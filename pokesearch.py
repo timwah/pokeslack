@@ -59,8 +59,8 @@ class Pokesearch:
             self.login()
 
         all_pokemon = {}
-        i = 1
-        for coord in generate_location_steps(position, num_steps):
+
+        for step, coord in enumerate(generate_location_steps(position, num_steps), 1):
             lat = coord[0]
             lng = coord[1]
             self.api.set_position(*coord)
@@ -95,8 +95,7 @@ class Pokesearch:
                 # else:
                 #     logger.info("have duplicate poke: %s", key)
             total_steps = (3 * (num_steps**2)) - (3 * num_steps) + 1
-            logger.info('Completed {:5.2f}% of scan.'.format(float(i) / total_steps * 100))
-            i += 1
+            logger.info('Completed {:5.2f}% of scan.'.format(float(step) / total_steps * 100))
             time.sleep(REQ_SLEEP)
 
 def generate_location_steps(position, num_steps):
