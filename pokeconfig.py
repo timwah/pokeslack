@@ -4,6 +4,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Pokeconfig:
+    # constants
+    WALK_SPEED_MPH = 0.0008333 # assumes 3mph (or 0.0008333 miles per second) walking speed
+
+    # configured via env
     auth_service = None
     username = None
     password = None
@@ -11,6 +15,8 @@ class Pokeconfig:
     rarity_limit = 3
     slack_webhook_url = None
     num_steps = 5
+    distance_unit = None
+    position = ()
 
     def load_config(self, config_path):
         is_local = False
@@ -40,10 +46,17 @@ class Pokeconfig:
             self.rarity_limit = int(env['RARITY_LIMIT'])
             self.slack_webhook_url = str(env['SLACK_WEBHOOK_URL'])
             self.num_steps = int(env['NUM_STEPS'])
+            self.distance_unit = str(env['DISTANCE_UNIT'])
         except KeyError as ke:
             logging.error('key must be defined in config: %s!', ke)
             exit(-1)
 
+        Pokeconfig._instance = self
         logger.info('loaded config with params')
         for config in ['auth_service', 'username', 'location_name', 'rarity_limit', 'slack_webhook_url', 'num_steps']:
             logger.info('%s=%s', config, getattr(self, config))
+
+    _instance = None
+    @staticmethod
+    def get():
+        return Pokeconfig._instance

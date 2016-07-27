@@ -5,7 +5,6 @@ import sys
 import time
 
 from datetime import datetime
-from geopy.distance import vincenty
 from pgoapi import PGoApi
 
 from pokeconfig import Pokeconfig
@@ -37,13 +36,14 @@ if __name__ == '__main__':
     rarity_limit = config.rarity_limit
     slack_webhook_url = config.slack_webhook_url
     num_steps = config.num_steps
-    
+
     # debug vars, used to test slack integration w/o waiting
     use_cache = False
     cached_filename = 'cached_pokedata.json'
     search_timeout = 30
 
     position, address = get_pos_by_name(location_name)
+    config.position = position
     logger.info('location_name: %s', address)
 
     api = PGoApi()
@@ -56,11 +56,8 @@ if __name__ == '__main__':
         while True:
             pokemons = []
             for pokemon in pokesearch.search(position, num_steps):
-                pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
-                distance = vincenty(position, pokemon_position).miles
-                expires_in = pokemon['disappear_time'] - datetime.utcnow()
-                logger.info("adding pokemon: %s - %s, rarity: %s, expires in: %s, distance: %s miles", pokemon['pokemon_id'], pokemon['name'], pokemon['rarity'], expires_in, distance)
-                pokeslack.try_send_pokemon(pokemon, position, distance, debug=False)
+                logger.info('adding pokemon: %s', pokemon)
+                pokeslack.try_send_pokemon(pokemon, debug=False)
                 pokemons.append(pokemon)
             with open(cached_filename, 'w') as fp:
                 json.dump(pokemons, fp, default=json_serializer, indent=4)
@@ -69,8 +66,7 @@ if __name__ == '__main__':
     else:
         with open(cached_filename, 'r') as fp:
             pokemons = json.load(fp, object_hook=json_deserializer)
-            for pokemon in pokemons:
-                pokemon_position = (pokemon['latitude'], pokemon['longitude'], 0)
-                distance = vincenty(position, pokemon_position).miles
-                pokeslack.try_send_pokemon(pokemon, position, distance, debug=True)
+            # for pokemon in pokemons:
+                # logger.info('loaded pokemon: %s', pokemon)
+                # pokeslack.try_send_pokemon(pokemon, position, distance, debug=True)
         logger.info('loaded cached pokemon data for %s pokemon', len(pokemons))

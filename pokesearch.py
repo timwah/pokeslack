@@ -77,19 +77,14 @@ class Pokesearch:
                 response_dict = self.api.call()
                 time.sleep(REQ_SLEEP)
 
-            try:
-                pokemons, pokestops, gyms = parse_map(response_dict)
-            except KeyError as e:
-                logger.error('failed to parse map with key error: %s', e)
+            # try:
+            pokemons = parse_map(response_dict)
+            # except KeyError as e:
+            #     logger.error('failed to parse map with key error: %s', e)
 
             for key in pokemons.keys():
                 if not key in all_pokemon:
                     pokemon = pokemons[key]
-                    pokemon_id = pokemon['pokemon_id']
-                    pokedata = Pokedata.get(pokemon_id)
-                    pokemon['name'] = pokedata['name']
-                    pokemon['rarity'] = pokedata['rarity']
-                    pokemon['key'] = key
                     all_pokemon[key] = pokemon
                     yield pokemon
                 # else:
