@@ -8,6 +8,7 @@ from datetime import datetime
 from geopy.distance import vincenty
 from pgoapi import PGoApi
 
+from pokeconfig import Pokeconfig
 from pokedata import json_deserializer, json_serializer
 from pokesearch import Pokesearch
 from pokeslack import Pokeslack
@@ -15,31 +16,28 @@ from pokeutil import get_pos_by_name
 
 logger = logging.getLogger(__name__)
 
+import ConfigParser
+
 if __name__ == '__main__':
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("pgoapi.pgoapi").setLevel(logging.WARNING)
-    logging.getLogger("pgoapi.rpc_api").setLevel(logging.WARNING)
+    logging.getLogger('requests').setLevel(logging.WARNING)
+    logging.getLogger('pgoapi.pgoapi').setLevel(logging.WARNING)
+    logging.getLogger('pgoapi.rpc_api').setLevel(logging.WARNING)
 
-    # used for local testing without starting up heroku
-    env = {}
-    if os.path.exists('.env'):
-        with open('.env', 'r') as fp:
-            for line in fp:
-                parts = line.split('=')
-                env[parts[0].strip()] = parts[1].strip()
+    logging.info('Pokeslack starting...')
 
-    auth_service = str(os.environ.get('AUTH_SERVICE', env.get('AUTH_SERVICE')))
-    username = str(os.environ.get('USERNAME', env.get('USERNAME')))
-    password = str(os.environ.get('PASSWORD', env.get('PASSWORD')))
-    location_name = str(os.environ.get('LOCATION_NAME', env.get('LOCATION_NAME')))
-    rarity_limit = int(os.environ.get('RARITY_LIMIT', env.get('RARITY_LIMIT')))
-    slack_webhook_url = str(os.environ.get('SLACK_WEBHOOK_URL', env.get('SLACK_WEBHOOK_URL')))
+    config = Pokeconfig()
+    config.load_config('.env')
 
-    # const vars
-    num_steps = 5
-
+    auth_service = config.auth_service
+    username = config.username
+    password = config.password
+    location_name = config.location_name
+    rarity_limit = config.rarity_limit
+    slack_webhook_url = config.slack_webhook_url
+    num_steps = config.num_steps
+    
     # debug vars, used to test slack integration w/o waiting
     use_cache = False
     cached_filename = 'cached_pokedata.json'
