@@ -44,3 +44,6 @@ This project builds on existing PokemonGo APIs and integrations:
 https://github.com/tejado/pgoapi  
 https://github.com/AHAAAAAAA/PokemonGo-Map  
 [@mastermindmatt](https://github.com/mastermindmatt) for the rarity data in pokedata.csv
+
+## Donations
+[Donate Bitcoins](https://www.coinbase.com/checkouts/2dba5a7fe26b5073e47c50f5d666469b)
