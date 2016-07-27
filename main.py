@@ -15,8 +15,6 @@ from pokeutil import get_pos_by_name
 
 logger = logging.getLogger(__name__)
 
-import ConfigParser
-
 if __name__ == '__main__':
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
