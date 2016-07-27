@@ -28,7 +28,8 @@ class Pokeslack:
             return
 
         padded_distance = pokemon.get_distance() * 1.1
-        travel_time = padded_distance / Pokeconfig.WALK_SPEED_MPH
+        walk_distance_per_second = Pokeconfig.WALK_METERS_PER_SECOND if Pokeconfig.get().distance_unit == 'km' else Pokeconfig.WALK_MILES_PER_SECOND
+        travel_time = padded_distance / walk_distance_per_second
         if pokemon.expires_in().total_seconds() < travel_time:
             logger.info('skipping pokemon since it\'s too far: traveltime=%s for distance=%s', travel_time, pokemon.get_distance_str())
             return

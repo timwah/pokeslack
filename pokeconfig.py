@@ -5,7 +5,8 @@ logger = logging.getLogger(__name__)
 
 class Pokeconfig:
     # constants
-    WALK_SPEED_MPH = 0.0008333 # assumes 3mph (or 0.0008333 miles per second) walking speed
+    WALK_MILES_PER_SECOND = 0.0008333 # assumes 3mph (or 0.0008333 miles per second) walking speed
+    WALK_METERS_PER_SECOND = 1.34112
 
     # configured via env
     auth_service = None
