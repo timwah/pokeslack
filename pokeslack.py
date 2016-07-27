@@ -36,7 +36,7 @@ class Pokeslack:
 
         pokemon_key = pokemon.key
         if pokemon_key in self.sent_pokemon:
-            logger.info('already sent this pokemon to slack')
+            logger.info('already sent this pokemon to slack with key %s', pokemon_key)
             return
 
         from_lure = ', from a lure' if pokemon.from_lure else ''

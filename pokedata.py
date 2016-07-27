@@ -99,7 +99,7 @@ class Pokemon:
             return '%s miles' % value
 
     def __str__(self):
-        return '%s<id:%s, rarity: %s, expires_in: %s, distance: %s>' % (self.name, self.pokemon_id, self.rarity, self.expires_in_str(), self.get_distance_str())
+        return '%s<id:%s, key:%s, rarity: %s, expires_in: %s, distance: %s>' % (self.name, self.pokemon_id, self.key, self.rarity, self.expires_in_str(), self.get_distance_str())
 
 def parse_map(map_dict):
     pokemons = {}
