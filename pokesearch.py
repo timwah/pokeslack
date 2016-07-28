@@ -68,14 +68,16 @@ class Pokesearch:
             cell_ids = get_cell_ids(lat, lng)
             timestamps = [0,] * len(cell_ids)
 
-            self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
-            response_dict = self.api.call()
-
+            response_dict = None
             while not response_dict:
-                logger.info('Map Download failed. Trying again.')
-                self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
-                response_dict = self.api.call()
-                time.sleep(REQ_SLEEP)
+                try:
+                    self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
+                    response_dict = self.api.call()
+                except:
+                    logging.warn('exception happened on get_map_objects api call', exc_info=True)
+                if not response_dict:
+                    logger.warn('get_map_objects failed, retrying in %s seconds...', REQ_SLEEP)
+                    time.sleep(REQ_SLEEP)
 
             # try:
             pokemons = parse_map(response_dict)
