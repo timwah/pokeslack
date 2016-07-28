@@ -3,6 +3,9 @@ import csv
 
 from base64 import b64encode
 from datetime import datetime
+from geopy.distance import vincenty
+
+from pokeconfig import Pokeconfig
 
 class Pokedata:
     pokedata = None
@@ -22,24 +25,90 @@ class Pokedata:
                     }
         return Pokedata.pokedata[pokemon_id]
 
+class Pokemon:
+    position = ()
+    latitude = None
+    longitude = None
+    pokemon_id = 0
+    encounter_id = None
+    spawnpoint_id = None
+    disappear_time = None
+    from_lure = False
+    pokestop_id = 0
+    name = None
+    rarity = 1
+    key = None
+
+    @staticmethod
+    def from_pokemon(pokemon):
+        p = Pokemon()
+        p.encounter_id =  b64encode(str(pokemon['encounter_id']))
+        p.spawnpoint_id = pokemon['spawnpoint_id']
+        p.pokemon_id = pokemon['pokemon_data']['pokemon_id']
+        p.position = (pokemon['latitude'], pokemon['longitude'], 0)
+        p.disappear_time =  datetime.utcfromtimestamp(
+            (pokemon['last_modified_timestamp_ms'] +
+             pokemon['time_till_hidden_ms']) / 1000.0)
+        p._get_pokedata()
+        return p
+
+    @staticmethod
+    def from_pokestop(pokestop):
+        p = Pokemon()
+        p.position = (pokestop['latitude'], pokestop['longitude'], 0)
+        p.pokemon_id = pokestop['active_pokemon_id']
+        p.disappear_time = pokestop['lure_expiration']
+        p.from_lure = True
+        p.pokestop_id = pokestop['pokestop_id']
+        p._get_pokedata()
+        return p
+
+    def _get_pokedata(self):
+        pokedata = Pokedata.get(self.pokemon_id)
+        self.name = pokedata['name']
+        self.rarity = pokedata['rarity']
+        self.key = self._get_key()
+
+    def _get_key(self):
+        if self.from_lure:
+            key = '%s_%s' % (self.pokestop_id, self.pokemon_id)
+        else:
+            key = self.encounter_id
+        return key
+
+    def expires_in(self):
+        return self.disappear_time - datetime.utcnow()
+
+    def expires_in_str(self):
+        min_remaining = int(self.expires_in().total_seconds() / 60)
+        return '%s%ss' % ('%dm' % min_remaining if min_remaining > 0 else '', self.expires_in().seconds - 60 * min_remaining)
+
+    def get_distance(self):
+        position = Pokeconfig.get().position
+        distance = vincenty(position, self.position)
+        if Pokeconfig.get().distance_unit == 'meters':
+            return distance.meters
+        else:
+            return distance.miles
+
+    def get_distance_str(self):
+        if Pokeconfig.get().distance_unit == 'meters':
+            return '{:.0f} meters'.format(self.get_distance())    
+        else:
+            return '{:.3f} miles'.format(self.get_distance())
+
+    def __str__(self):
+        return '%s<id:%s, key:%s, rarity: %s, expires_in: %s, distance: %s>' % (self.name, self.pokemon_id, self.key, self.rarity, self.expires_in_str(), self.get_distance_str())
+
 def parse_map(map_dict):
     pokemons = {}
     pokestops = {}
-    gyms = {}
 
     cells = map_dict['responses']['GET_MAP_OBJECTS']['map_cells']
     for cell in cells:
         for p in cell.get('wild_pokemons', []):
-            pokemons[p['encounter_id']] = {
-                'encounter_id': b64encode(str(p['encounter_id'])),
-                'spawnpoint_id': p['spawnpoint_id'],
-                'pokemon_id': p['pokemon_data']['pokemon_id'],
-                'latitude': p['latitude'],
-                'longitude': p['longitude'],
-                'disappear_time': datetime.utcfromtimestamp(
-                    (p['last_modified_timestamp_ms'] +
-                     p['time_till_hidden_ms']) / 1000.0)
-            }
+            pokemon = Pokemon.from_pokemon(p)
+            pokemons[pokemon.key] = pokemon
 
         for f in cell.get('forts', []):
             if f.get('type') == 1:  # Pokestops
@@ -61,39 +130,16 @@ def parse_map(map_dict):
                     'lure_expiration': lure_expiration,
                     'active_pokemon_id': active_pokemon_id
                 }
-
-            else:  # Currently, there are only stops and gyms
-                gyms[f['id']] = {
-                    'gym_id': f['id'],
-                    'team_id': f.get('owned_by_team', 0),
-                    'guard_pokemon_id': f.get('guard_pokemon_id', 0),
-                    'gym_points': f.get('gym_points', 0),
-                    'enabled': f['enabled'],
-                    'latitude': f['latitude'],
-                    'longitude': f['longitude'],
-                    'last_modified': datetime.utcfromtimestamp(
-                        f['last_modified_timestamp_ms'] / 1000.0),
-                }
-
     if pokestops:
         for key in pokestops.keys():
             pokestop = pokestops[key]
             pokemon_id = pokestop['active_pokemon_id']
             if pokemon_id:
-                key = '%s_%s' % (pokestop['pokestop_id'], pokemon_id)
-                if not key in pokemons:
-                    expires_in = pokestop['lure_expiration'] - datetime.utcnow()
-                    pokemons[key] = {
-                        'latitude': pokestop['latitude'],
-                        'longitude': pokestop['longitude'],
-                        'pokemon_id': pokemon_id,
-                        'disappear_time': pokestop['lure_expiration'],
-                        'from_lure': True
-                    }
-                # else:
-                #     logger.info("dupe pokemon from stop detected for key: %s", key)
+                pokemon = Pokemon.from_pokestop(pokestop)
+                if pokemon.pokemon_id and not pokemon.key in pokemons:
+                    pokemons[pokemon.key] = pokemon
 
-    return pokemons, pokestops, gyms
+    return pokemons
 
 def json_deserializer(obj):
     for key, value in obj.items():

@@ -22,6 +22,14 @@
 		},
 		"SLACK_WEBHOOK_URL": {
 			"description": "Looks like https://hooks.slack.com/services/XXX"
+		},
+		"NUM_STEPS": {
+			"description": "Number of steps to search.",
+			"value": "5"
+		},
+		"DISTANCE_UNIT": {
+			"description": "Unit of measurement to use (meters or miles)",
+			"value": "miles"
 		}
 	}
 }
