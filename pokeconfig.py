@@ -57,9 +57,11 @@ class Pokeconfig:
 
         Pokeconfig._instance = self
         logger.info('loaded config with params')
-        for config in ['auth_service', 'username', 'location_name', 'rarity_limit', 'slack_webhook_url', 'num_steps']:
-            logger.info('%s=%s', config, getattr(self, config))
-
+        for key, value in vars(self).iteritems():
+            if key == 'password':
+                value = '****'
+            logger.info('%s=%s', key, value)
+        
     _instance = None
     @staticmethod
     def get():

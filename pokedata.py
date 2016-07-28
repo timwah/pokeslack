@@ -86,17 +86,16 @@ class Pokemon:
     def get_distance(self):
         position = Pokeconfig.get().position
         distance = vincenty(position, self.position)
-        if Pokeconfig.get().distance_unit == 'km':
+        if Pokeconfig.get().distance_unit == 'meters':
             return distance.meters
         else:
             return distance.miles
 
     def get_distance_str(self):
-        value = '{:.3f}'.format(self.get_distance())
-        if Pokeconfig.get().distance_unit == 'km':
-            return '%s meters' % value
+        if Pokeconfig.get().distance_unit == 'meters':
+            return '{:.0f} meters'.format(self.get_distance())    
         else:
-            return '%s miles' % value
+            return '{:.3f} miles'.format(self.get_distance())
 
     def __str__(self):
         return '%s<id:%s, key:%s, rarity: %s, expires_in: %s, distance: %s>' % (self.name, self.pokemon_id, self.key, self.rarity, self.expires_in_str(), self.get_distance_str())
