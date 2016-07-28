@@ -6,7 +6,8 @@ logger = logging.getLogger(__name__)
 class Pokeconfig:
     # constants
     WALK_MILES_PER_SECOND = 0.0008333 # assumes 3mph (or 0.0008333 miles per second) walking speed
-    WALK_METERS_PER_SECOND = 1.34112
+    WALK_METERS_PER_SECOND = 1.34112 # conversion from 3mph
+    EXPIRE_BUFFER_SECONDS = 5 # if a pokemon expires in 5 seconds or less (includes negative/stale pokemon), dont send it
 
     # configured via env
     auth_service = None
@@ -33,8 +34,10 @@ class Pokeconfig:
             logger.info('running locally, reading config from %s', config_path)
             with open(config_path, 'r') as fp:
                 for line in fp:
-                    parts = line.split('=')
-                    env[parts[0].strip()] = parts[1].strip()
+                    idx = line.index('=')
+                    key = line[:idx]
+                    value = line[idx + 1:].strip()
+                    env[key] = value
         else:
             logger.info('running on heroku, reading config from environment')
             env = os.environ

@@ -9,8 +9,6 @@ from pokeconfig import Pokeconfig
 
 logger = logging.getLogger(__name__)
 
-EXPIRE_BUFFER_SECONDS = 5
-
 class Pokeslack:
     def __init__(self, rarity_limit, slack_webhook_url):
         self.sent_pokemon = {}
@@ -19,7 +17,7 @@ class Pokeslack:
 
     def try_send_pokemon(self, pokemon, debug):
 
-        if pokemon.expires_in().total_seconds() < EXPIRE_BUFFER_SECONDS:
+        if pokemon.expires_in().total_seconds() < Pokeconfig.EXPIRE_BUFFER_SECONDS:
             logger.info('skipping pokemon since it expires too soon')
             return
 
