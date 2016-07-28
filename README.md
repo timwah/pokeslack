@@ -37,7 +37,7 @@ Using Heroku:
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 ## Ideas for improvement
-* Nicer Slack messages with images to the Pokemon, and a static Google map image of where the Pokemon is in comparison to the search position
+Check out the [wiki](https://github.com/timwah/pokeslack/wiki) for a roadmap
 
 ## Credits  
 This project builds on existing PokemonGo APIs and integrations:  
