@@ -8,6 +8,8 @@ class Pokeconfig:
     WALK_MILES_PER_SECOND = 0.0008333 # assumes 3mph (or 0.0008333 miles per second) walking speed
     WALK_METERS_PER_SECOND = 1.34112 # conversion from 3mph
     EXPIRE_BUFFER_SECONDS = 5 # if a pokemon expires in 5 seconds or less (includes negative/stale pokemon), dont send it
+    DEFAULT_NUM_STEPS = 5
+    DEFAULT_DISTANCE_UNIT = 'miles'
 
     # configured via env
     auth_service = None
@@ -16,8 +18,8 @@ class Pokeconfig:
     location_name = None
     rarity_limit = 3
     slack_webhook_url = None
-    num_steps = 5
-    distance_unit = None
+    num_steps = DEFAULT_NUM_STEPS
+    distance_unit = DEFAULT_DISTANCE_UNIT
     position = ()
 
     def load_config(self, config_path):
@@ -49,8 +51,14 @@ class Pokeconfig:
             self.location_name = str(env['LOCATION_NAME'])
             self.rarity_limit = int(env['RARITY_LIMIT'])
             self.slack_webhook_url = str(env['SLACK_WEBHOOK_URL'])
-            self.num_steps = int(env['NUM_STEPS'])
-            self.distance_unit = str(env['DISTANCE_UNIT'])
+            if 'NUM_STEPS' in env:
+                self.num_steps = int(env['NUM_STEPS'])
+            else:
+                logging.warn('NUM_STEPS not defined defaulting to: %s', self.num_steps)
+            if 'DISTANCE_UNIT' in env:
+                self.distance_unit = str(env['DISTANCE_UNIT'])
+            else:
+                logging.warn('DISTANCE_UNIT not defined defaulting to: %s', self.distance_unit)
         except KeyError as ke:
             logging.error('key must be defined in config: %s!', ke)
             exit(-1)
@@ -61,7 +69,7 @@ class Pokeconfig:
             if key == 'password':
                 value = '****'
             logger.info('%s=%s', key, value)
-        
+
     _instance = None
     @staticmethod
     def get():
