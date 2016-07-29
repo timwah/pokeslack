@@ -13,6 +13,7 @@ from pokedata import Pokedata, parse_map
 logger = logging.getLogger(__name__)
 
 REQ_SLEEP = 1
+MAX_NUM_RETRIES = 10
 
 #Constants for Hex Grid
 #Gap between vertical and horzonal "rows"
@@ -59,6 +60,7 @@ class Pokesearch:
             self.login()
 
         all_pokemon = {}
+        num_retries = 0
 
         for step, coord in enumerate(generate_location_steps(position, num_steps), 1):
             lat = coord[0]
@@ -76,8 +78,13 @@ class Pokesearch:
                 except:
                     logging.warn('exception happened on get_map_objects api call', exc_info=True)
                 if not response_dict:
-                    logger.warn('get_map_objects failed, retrying in %s seconds...', REQ_SLEEP)
-                    time.sleep(REQ_SLEEP)
+                    if num_retries < MAX_NUM_RETRIES:
+                        num_retries += 1
+                        logger.warn('get_map_objects failed, retrying in %s seconds, %s retries', REQ_SLEEP, num_retries)
+                        time.sleep(REQ_SLEEP)
+                    else:
+                        logger.warn('MAX_NUM_RETRIES exceeded, retrying login...')
+                        raise StopIteration
 
             # try:
             pokemons = parse_map(response_dict)
