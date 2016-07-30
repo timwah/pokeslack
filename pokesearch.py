@@ -88,6 +88,7 @@ class Pokesearch:
                         time.sleep(REQ_SLEEP)
                     else:
                         logger.warn('MAX_NUM_RETRIES exceeded, retrying login...')
+                        self.login()
                         raise StopIteration
 
             # try:
