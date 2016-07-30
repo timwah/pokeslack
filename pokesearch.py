@@ -117,7 +117,7 @@ class Pokesearch:
                 self.visible_range_meters = float(visible_range_meters)
             except:
                 logging.warn('exception happened on download_settings api call', exc_info=True)
-        logger.info('download settings: %s', self.visible_range_meters)
+        logger.info('download settings[pokemon_visible_range]: %s', self.visible_range_meters)
 
 def generate_location_steps(position, num_steps, visible_range_meters):
     #Bearing (degrees)
