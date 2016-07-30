@@ -34,6 +34,8 @@ class Pokesearch:
         self.username = username
         self.password = password
         self.position = position
+        self.visible_range_meters = 70
+
 
     def login(self):
         logger.info('login start with service: %s', self.auth_service)
@@ -43,6 +45,8 @@ class Pokesearch:
         while not self.api.login(self.auth_service, self.username, self.password):
             logger.warn('failed to login to pokemon go, retrying...')
             time.sleep(REQ_SLEEP)
+
+        self._update_download_settings()
 
         logger.info('login successful')
 
@@ -62,7 +66,7 @@ class Pokesearch:
         all_pokemon = {}
         num_retries = 0
 
-        for step, coord in enumerate(generate_location_steps(position, num_steps), 1):
+        for step, coord in enumerate(generate_location_steps(position, num_steps, self.visible_range_meters), 1):
             lat = coord[0]
             lng = coord[1]
             self.api.set_position(*coord)
@@ -102,47 +106,75 @@ class Pokesearch:
             logger.info('Completed {:5.2f}% of scan.'.format(float(step) / total_steps * 100))
             time.sleep(REQ_SLEEP)
 
-def generate_location_steps(position, num_steps):
+    def _update_download_settings(self):
+        visible_range_meters = 0
+        while visible_range_meters == 0:
+            try:
+                logger.info('fetching download settings...')
+                self.api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
+                response_dict = self.api.call()
+                visible_range_meters = response_dict['responses']['DOWNLOAD_SETTINGS']['settings']['map_settings']['pokemon_visible_range']
+                self.visible_range_meters = float(visible_range_meters)
+            except:
+                logging.warn('exception happened on download_settings api call', exc_info=True)
+        logger.info('download settings[pokemon_visible_range]: %s', self.visible_range_meters)
 
-    ring = 1 #Which ring are we on, 0 = center
-    lat_location = position[0]
-    lng_location = position[1]
+def generate_location_steps(position, num_steps, visible_range_meters):
+    #Bearing (degrees)
+    NORTH = 0
+    EAST = 90
+    SOUTH = 180
+    WEST = 270
 
-    yield (lat_location, lng_location, 0) #Middle circle
+    pulse_radius = visible_range_meters / 1000.0 # km - radius of players heartbeat is 100m
+    xdist = math.sqrt(3)*pulse_radius   # dist between column centers
+    ydist = 3*(pulse_radius/2)          # dist between row centers
 
+    yield (position[0], position[1], 0) #insert initial location
+
+    ring = 1
+    loc = position
     while ring < num_steps:
-        #Move the location diagonally to top left spot, then start the circle which will end up back here for the next ring
-        #Move Lat north first
-        lat_location += lat_gap_degrees
-        lng_location -= calculate_lng_degrees(lat_location)
-
+        #Set loc to start at top left
+        loc = get_new_coords(loc, ydist, NORTH)
+        loc = get_new_coords(loc, xdist/2, WEST)
         for direction in range(6):
             for i in range(ring):
-                if direction == 0: #Right
-                    lng_location += calculate_lng_degrees(lat_location) * 2
-
-                if direction == 1: #Right Down
-                    lat_location -= lat_gap_degrees
-                    lng_location += calculate_lng_degrees(lat_location)
-
-                if direction == 2: #Left Down
-                    lat_location -= lat_gap_degrees
-                    lng_location -= calculate_lng_degrees(lat_location)
-
-                if direction == 3: #Left
-                    lng_location -= calculate_lng_degrees(lat_location) * 2
-
-                if direction == 4: #Left Up
-                    lat_location += lat_gap_degrees
-                    lng_location -= calculate_lng_degrees(lat_location)
-
-                if direction == 5: #Right Up
-                    lat_location += lat_gap_degrees
-                    lng_location += calculate_lng_degrees(lat_location)
-
-                yield (lat_location, lng_location, 0) #Middle circle
-
+                if direction == 0: # RIGHT
+                    loc = get_new_coords(loc, xdist, EAST)
+                if direction == 1: # DOWN + RIGHT
+                    loc = get_new_coords(loc, ydist, SOUTH)
+                    loc = get_new_coords(loc, xdist/2, EAST)
+                if direction == 2: # DOWN + LEFT
+                    loc = get_new_coords(loc, ydist, SOUTH)
+                    loc = get_new_coords(loc, xdist/2, WEST)
+                if direction == 3: # LEFT
+                    loc = get_new_coords(loc, xdist, WEST)
+                if direction == 4: # UP + LEFT
+                    loc = get_new_coords(loc, ydist, NORTH)
+                    loc = get_new_coords(loc, xdist/2, WEST)
+                if direction == 5: # UP + RIGHT
+                    loc = get_new_coords(loc, ydist, NORTH)
+                    loc = get_new_coords(loc, xdist/2, EAST)
+                yield (loc[0], loc[1], 0)
         ring += 1
+
+def get_new_coords(init_loc, distance, bearing):
+    """ Given an initial lat/lng, a distance(in kms), and a bearing (degrees),
+    this will calculate the resulting lat/lng coordinates.
+    """
+    R = 6378.1 #km radius of the earth
+    bearing = math.radians(bearing)
+
+    init_coords = [math.radians(init_loc[0]), math.radians(init_loc[1])] # convert lat/lng to radians
+
+    new_lat = math.asin( math.sin(init_coords[0])*math.cos(distance/R) +
+        math.cos(init_coords[0])*math.sin(distance/R)*math.cos(bearing))
+
+    new_lon = init_coords[1] + math.atan2(math.sin(bearing)*math.sin(distance/R)*math.cos(init_coords[0]),
+        math.cos(distance/R)-math.sin(init_coords[0])*math.sin(new_lat))
+
+    return [math.degrees(new_lat), math.degrees(new_lon)]
 
 def get_cell_ids(lat, lng, radius = 10):
     origin = CellId.from_lat_lng(LatLng.from_degrees(lat, lng)).parent(15)
