@@ -34,7 +34,7 @@ class Pokesearch:
         self.username = username
         self.password = password
         self.position = position
-        self.visible_range_meters = 0.7
+        self.visible_range_meters = 70
 
 
     def login(self):
