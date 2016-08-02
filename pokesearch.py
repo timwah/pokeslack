@@ -12,7 +12,7 @@ from pokedata import Pokedata, parse_map
 
 logger = logging.getLogger(__name__)
 
-REQ_SLEEP = 1
+REQ_SLEEP = 5
 MAX_NUM_RETRIES = 10
 
 #Constants for Hex Grid
