@@ -42,9 +42,12 @@ class Pokesearch:
 
         self.api.set_position(*self.position)
 
+        num_retries = 0
         while not self.api.login(self.auth_service, self.username, self.password):
-            logger.warn('failed to login to pokemon go, retrying...')
-            time.sleep(REQ_SLEEP)
+            num_retries += 1
+            timeout = REQ_SLEEP * (int(num_retries / 5.0) + 1)
+            logger.warn('failed to login to pokemon go, retrying... timeout: %s, num_retries: %s', timeout, num_retries)
+            time.sleep(REQ_SLEEP * (int(num_retries / 5.0) + 1))
 
         self._update_download_settings()
 
