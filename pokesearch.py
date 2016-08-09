@@ -35,7 +35,7 @@ class Pokesearch:
         self.password = password
         self.position = position
         self.visible_range_meters = 70
-
+        self.min_refresh_seconds = 10
 
     def login(self):
         logger.info('login start with service: %s', self.auth_service)
@@ -49,6 +49,7 @@ class Pokesearch:
             logger.warn('failed to login to pokemon go, retrying... timeout: %s, num_retries: %s', timeout, num_retries)
             time.sleep(REQ_SLEEP * (int(num_retries / 5.0) + 1))
 
+        time.sleep(REQ_SLEEP)
         self._update_download_settings()
 
         logger.info('login successful')
@@ -78,26 +79,28 @@ class Pokesearch:
             timestamps = [0,] * len(cell_ids)
 
             response_dict = None
-            while not response_dict:
+            pokemons = None
+            while pokemons is None:
                 try:
-                    self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
-                    response_dict = self.api.call()
+                    logging.info('get map objects....')
+                    response_dict = self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
                 except:
                     logging.warn('exception happened on get_map_objects api call', exc_info=True)
-                if not response_dict:
+                try:
+                    pokemons = parse_map(response_dict)
+                    logging.warn('pokemons = %s', pokemons)
+                except:
+                    logger.warn('exception happened on parse_map', exc_info=True)
+
+                if not response_dict or pokemons is None:
                     if num_retries < MAX_NUM_RETRIES:
                         num_retries += 1
                         logger.warn('get_map_objects failed, retrying in %s seconds, %s retries', REQ_SLEEP, num_retries)
-                        time.sleep(REQ_SLEEP)
+                        time.sleep(self.min_refresh_seconds)
                     else:
                         logger.warn('MAX_NUM_RETRIES exceeded, retrying login...')
                         self.login()
                         raise StopIteration
-
-            # try:
-            pokemons = parse_map(response_dict)
-            # except KeyError as e:
-            #     logger.error('failed to parse map with key error: %s', e)
 
             for key in pokemons.keys():
                 if not key in all_pokemon:
@@ -108,20 +111,26 @@ class Pokesearch:
                 #     logger.info("have duplicate poke: %s", key)
             total_steps = (3 * (num_steps**2)) - (3 * num_steps) + 1
             logger.info('Completed {:5.2f}% of scan.'.format(float(step) / total_steps * 100))
-            time.sleep(REQ_SLEEP)
+            time.sleep(self.min_refresh_seconds)
 
     def _update_download_settings(self):
         visible_range_meters = 0
-        while visible_range_meters == 0:
+        min_refresh_seconds = 0
+        while visible_range_meters == 0 or min_refresh_seconds == 0:
             try:
                 logger.info('fetching download settings...')
-                self.api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
-                response_dict = self.api.call()
-                visible_range_meters = response_dict['responses']['DOWNLOAD_SETTINGS']['settings']['map_settings']['pokemon_visible_range']
+                response_dict = self.api.download_settings(hash="05daf51635c82611d1aac95c0b051d3ec088a930")
+                logger.warn('settings = %s', response_dict)
+                map_settings = response_dict['responses']['DOWNLOAD_SETTINGS']['settings']['map_settings']
+                visible_range_meters = map_settings['pokemon_visible_range']
+                min_refresh_seconds = map_settings['get_map_objects_min_refresh_seconds']
                 self.visible_range_meters = float(visible_range_meters)
+                self.min_refresh_seconds = float(min_refresh_seconds)
             except:
                 logging.warn('exception happened on download_settings api call', exc_info=True)
+                time.sleep(REQ_SLEEP)
         logger.info('download settings[pokemon_visible_range]: %s', self.visible_range_meters)
+        logger.info('download settings[get_map_objects_min_refresh_seconds]: %s', self.min_refresh_seconds)
 
 def generate_location_steps(position, num_steps, visible_range_meters):
     #Bearing (degrees)
