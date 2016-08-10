@@ -1,7 +1,8 @@
 future==0.15.2
+geographiclib==1.46.3
 geopy==1.11.0
 gpsoauth==0.3.0
--e git://github.com/keyphact/pgoapi.git#egg=pgoapi
+git+https://github.com/keyphact/pgoapi.git
 protobuf==3.0.0b4
 pycryptodomex==3.4.2
 requests==2.10.0

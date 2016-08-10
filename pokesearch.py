@@ -1,12 +1,14 @@
 import json
 import logging
-import math
 import random
 import time
 
 from datetime import datetime
-from pgoapi.utilities import f2i
-from s2sphere import CellId, LatLng
+from sys import maxint
+
+from geographiclib.geodesic import Geodesic
+from pgoapi.utilities import f2i, get_cell_ids
+from s2sphere import CellId, LatLng, Cap, Angle, RegionCoverer, math
 
 from pokedata import Pokedata, parse_map
 
@@ -73,9 +75,10 @@ class Pokesearch:
         for step, coord in enumerate(generate_location_steps(position, num_steps, self.visible_range_meters), 1):
             lat = coord[0]
             lng = coord[1]
+            logging.info('searching at location: %s', coord)
             self.api.set_position(*coord)
 
-            cell_ids = get_cell_ids(lat, lng)
+            cell_ids = get_cell_ids(lat, lng, self.visible_range_meters)
             timestamps = [0,] * len(cell_ids)
 
             response_dict = None
@@ -84,6 +87,7 @@ class Pokesearch:
                 try:
                     logging.info('get map objects....')
                     response_dict = self.api.get_map_objects(latitude = f2i(lat), longitude = f2i(lng), since_timestamp_ms = timestamps, cell_id = cell_ids)
+                    logging.info('response_dict = %s', response_dict)
                 except:
                     logging.warn('exception happened on get_map_objects api call', exc_info=True)
                 try:
@@ -133,74 +137,112 @@ class Pokesearch:
         logger.info('download settings[get_map_objects_min_refresh_seconds]: %s', self.min_refresh_seconds)
 
 def generate_location_steps(position, num_steps, visible_range_meters):
-    #Bearing (degrees)
-    NORTH = 0
-    EAST = 90
-    SOUTH = 180
-    WEST = 270
+        # cover = []
 
-    pulse_radius = visible_range_meters / 1000.0 # km - radius of players heartbeat is 100m
-    xdist = math.sqrt(3)*pulse_radius   # dist between column centers
-    ydist = 3*(pulse_radius/2)          # dist between row centers
+        # Go backwards through locations so that last location
+        # will be scanned first
+        scan_locations = [{"latitude": position[0], "longitude": position[1]}]
+        for scan_location in scan_locations:
+            lat = scan_location["latitude"]
+            lng = scan_location["longitude"]
+            radius = 1000 #1000 meters
 
-    yield (position[0], position[1], 0) #insert initial location
+            d = math.sqrt(3) * visible_range_meters
+            points = [[{'lat2': lat, 'lon2': lng, 's': 0}]]
 
-    ring = 1
-    loc = position
-    while ring < num_steps:
-        #Set loc to start at top left
-        loc = get_new_coords(loc, ydist, NORTH)
-        loc = get_new_coords(loc, xdist/2, WEST)
-        for direction in range(6):
-            for i in range(ring):
-                if direction == 0: # RIGHT
-                    loc = get_new_coords(loc, xdist, EAST)
-                if direction == 1: # DOWN + RIGHT
-                    loc = get_new_coords(loc, ydist, SOUTH)
-                    loc = get_new_coords(loc, xdist/2, EAST)
-                if direction == 2: # DOWN + LEFT
-                    loc = get_new_coords(loc, ydist, SOUTH)
-                    loc = get_new_coords(loc, xdist/2, WEST)
-                if direction == 3: # LEFT
-                    loc = get_new_coords(loc, xdist, WEST)
-                if direction == 4: # UP + LEFT
-                    loc = get_new_coords(loc, ydist, NORTH)
-                    loc = get_new_coords(loc, xdist/2, WEST)
-                if direction == 5: # UP + RIGHT
-                    loc = get_new_coords(loc, ydist, NORTH)
-                    loc = get_new_coords(loc, xdist/2, EAST)
-                yield (loc[0], loc[1], 0)
-        ring += 1
+            # The lines below are magic. Don't touch them.
+            for i in xrange(1, maxint):
+                oor_counter = 0
 
-def get_new_coords(init_loc, distance, bearing):
-    """ Given an initial lat/lng, a distance(in kms), and a bearing (degrees),
-    this will calculate the resulting lat/lng coordinates.
-    """
-    R = 6378.1 #km radius of the earth
-    bearing = math.radians(bearing)
+                points.append([])
+                for j in range(0, 6 * i):
+                    p = points[i - 1][(j - j / i - 1 + (j % i == 0))]
+                    p_new = Geodesic.WGS84.Direct(p['lat2'], p['lon2'], (j+i-1)/i * 60, d)
+                    p_new['s'] = Geodesic.WGS84.Inverse(p_new['lat2'], p_new['lon2'], lat, lng)['s12']
+                    points[i].append(p_new)
 
-    init_coords = [math.radians(init_loc[0]), math.radians(init_loc[1])] # convert lat/lng to radians
+                    if p_new['s'] > radius:
+                        oor_counter += 1
 
-    new_lat = math.asin( math.sin(init_coords[0])*math.cos(distance/R) +
-        math.cos(init_coords[0])*math.sin(distance/R)*math.cos(bearing))
+                if oor_counter == 6 * i:
+                    break
 
-    new_lon = init_coords[1] + math.atan2(math.sin(bearing)*math.sin(distance/R)*math.cos(init_coords[0]),
-        math.cos(distance/R)-math.sin(init_coords[0])*math.sin(new_lat))
+            for sublist in points:
+                for p in sublist:
+                    if p['s'] < radius:
+                        yield (p['lat2'], p['lon2'], 0)
+        #     cover.extend({"lat": p['lat2'], "lng": p['lon2']}
+        #                  for sublist in points for p in sublist if p['s'] < radius)
+        #
+        # self.COVER = cover
 
-    return [math.degrees(new_lat), math.degrees(new_lon)]
+# def generate_location_steps(position, num_steps, visible_range_meters):
+#     #Bearing (degrees)
+#     NORTH = 0
+#     EAST = 90
+#     SOUTH = 180
+#     WEST = 270
+#
+#     pulse_radius = visible_range_meters / 1000.0 # km - radius of players heartbeat is 100m
+#     xdist = math.sqrt(3)*pulse_radius   # dist between column centers
+#     ydist = 3*(pulse_radius/2)          # dist between row centers
+#
+#     yield (position[0], position[1], 0) #insert initial location
+#
+#     ring = 1
+#     loc = position
+#     while ring < num_steps:
+#         #Set loc to start at top left
+#         loc = get_new_coords(loc, ydist, NORTH)
+#         loc = get_new_coords(loc, xdist/2, WEST)
+#         for direction in range(6):
+#             for i in range(ring):
+#                 if direction == 0: # RIGHT
+#                     loc = get_new_coords(loc, xdist, EAST)
+#                 if direction == 1: # DOWN + RIGHT
+#                     loc = get_new_coords(loc, ydist, SOUTH)
+#                     loc = get_new_coords(loc, xdist/2, EAST)
+#                 if direction == 2: # DOWN + LEFT
+#                     loc = get_new_coords(loc, ydist, SOUTH)
+#                     loc = get_new_coords(loc, xdist/2, WEST)
+#                 if direction == 3: # LEFT
+#                     loc = get_new_coords(loc, xdist, WEST)
+#                 if direction == 4: # UP + LEFT
+#                     loc = get_new_coords(loc, ydist, NORTH)
+#                     loc = get_new_coords(loc, xdist/2, WEST)
+#                 if direction == 5: # UP + RIGHT
+#                     loc = get_new_coords(loc, ydist, NORTH)
+#                     loc = get_new_coords(loc, xdist/2, EAST)
+#                 yield (loc[0], loc[1], 0)
+#         ring += 1
 
-def get_cell_ids(lat, lng, radius = 10):
-    origin = CellId.from_lat_lng(LatLng.from_degrees(lat, lng)).parent(15)
-    walk = [origin.id()]
-    right = origin.next()
-    left = origin.prev()
+# def get_new_coords(init_loc, distance, bearing):
+#     """ Given an initial lat/lng, a distance(in kms), and a bearing (degrees),
+#     this will calculate the resulting lat/lng coordinates.
+#     """
+#     R = 6378.1 #km radius of the earth
+#     bearing = math.radians(bearing)
+#
+#     init_coords = [math.radians(init_loc[0]), math.radians(init_loc[1])] # convert lat/lng to radians
+#
+#     new_lat = math.asin( math.sin(init_coords[0])*math.cos(distance/R) +
+#         math.cos(init_coords[0])*math.sin(distance/R)*math.cos(bearing))
+#
+#     new_lon = init_coords[1] + math.atan2(math.sin(bearing)*math.sin(distance/R)*math.cos(init_coords[0]),
+#         math.cos(distance/R)-math.sin(init_coords[0])*math.sin(new_lat))
+#
+#     return [math.degrees(new_lat), math.degrees(new_lon)]
 
-    # Search around provided radius
-    for i in range(radius):
-        walk.append(right.id())
-        walk.append(left.id())
-        right = right.next()
-        left = left.prev()
-
-    # Return everything
-    return sorted(walk)
+# EARTH_RADIUS = 6371 * 1000
+# def get_cell_ids(lat, long, radius=1000):
+#     # Max values allowed by server according to this comment:
+#     # https://github.com/AeonLucid/POGOProtos/issues/83#issuecomment-235612285
+#     if radius > 1500:
+#         radius = 1500  # radius = 1500 is max allowed by the server
+#     region = Cap.from_axis_angle(LatLng.from_degrees(lat, long).to_point(), Angle.from_degrees(360*radius/(2*math.pi*EARTH_RADIUS)))
+#     coverer = RegionCoverer()
+#     coverer.min_level = 15
+#     coverer.max_level = 15
+#     cells = coverer.get_covering(region)
+#     cells = cells[:100]  # len(cells) = 100 is max allowed by the server
+#     return sorted([x.id() for x in cells])

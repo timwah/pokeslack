@@ -93,12 +93,13 @@ class Pokemon:
 
     def get_distance_str(self):
         if Pokeconfig.get().distance_unit == 'meters':
-            return '{:.0f} meters'.format(self.get_distance())    
+            return '{:.0f} meters'.format(self.get_distance())
         else:
             return '{:.3f} miles'.format(self.get_distance())
 
     def __str__(self):
         return '%s<id:%s, key:%s, rarity: %s, expires_in: %s, distance: %s>' % (self.name, self.pokemon_id, self.key, self.rarity, self.expires_in_str(), self.get_distance_str())
+
 
 def parse_map(map_dict):
     pokemons = {}
@@ -106,7 +107,8 @@ def parse_map(map_dict):
 
     cells = map_dict['responses']['GET_MAP_OBJECTS']['map_cells']
     for cell in cells:
-        for p in cell.get('wild_pokemons', []):
+        all_pokemons = cell.get('wild_pokemons', []) + cell.get('catchable_pokemons', [])
+        for p in all_pokemons:
             pokemon = Pokemon.from_pokemon(p)
             pokemons[pokemon.key] = pokemon
 
